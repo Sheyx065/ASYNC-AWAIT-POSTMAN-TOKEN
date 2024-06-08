@@ -1,96 +1,95 @@
+const apiUrl = 'https://6662ac4162966e20ef097175.mockapi.io/api/products/products';
+
 document.addEventListener('DOMContentLoaded', () => {
-    const apiURL = 'https://6662ac4162966e20ef097175.mockapi.io/api/products/products';
     const addProductBtn = document.getElementById('addProductBtn');
-    const productModal = document.getElementById('productModal');
-    const closeModal = document.querySelector('.close');
+    const productFormPopup = document.getElementById('productFormPopup');
     const productForm = document.getElementById('productForm');
-    const productIdInput = document.getElementById('productId');
-    const productNameInput = document.getElementById('productName');
-    const productPriceInput = document.getElementById('productPrice');
-    const productImageInput = document.getElementById('productImage');
-    const modalTitle = document.getElementById('modalTitle');
+    const closePopupBtn = document.getElementById('closePopupBtn');
+    const productContainer = document.getElementById('productContainer');
+
+    let isUpdate = false;
+    let updateId = null;
 
     addProductBtn.addEventListener('click', () => {
-        openModal();
+        isUpdate = false;
+        updateId = null;
+        productForm.reset();
+        document.getElementById('formTitle').textContent = 'Add Product';
+        productFormPopup.style.display = 'block';
     });
 
-    closeModal.addEventListener('click', () => {
-        closeModalFunc();
-    });
-
-    window.addEventListener('click', (event) => {
-        if (event.target == productModal) {
-            closeModalFunc();
-        }
+    closePopupBtn.addEventListener('click', () => {
+        productFormPopup.style.display = 'none';
     });
 
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = productIdInput.value;
-        const name = productNameInput.value;
-        const price = productPriceInput.value;
-        const imageUrl = productImageInput.value;
+        const name = document.getElementById('productName').value;
+        const image = document.getElementById('productImage').value;
+        const description = document.getElementById('productDescription').value;
 
-        const product = { name, price, imageUrl };
+        const product = { name, image, description };
 
-        if (id) {
-              await fetch(`${apiURL}/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(product)
-            });
+        if (isUpdate) {
+            await updateProduct(updateId, product);
         } else {
-       
-            await fetch(apiURL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(product)
-            });
+            await addProduct(product);
         }
-        closeModalFunc();
+
+        productFormPopup.style.display = 'none';
         loadProducts();
     });
 
     async function loadProducts() {
-        const response = await fetch(apiURL);
+        const response = await fetch(apiUrl);
         const products = await response.json();
-        const productList = document.getElementById('productList');
-        productList.innerHTML = '';
+        productContainer.innerHTML = '';
+
         products.forEach(product => {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             productCard.innerHTML = `
-                <img src="${product.imageUrl}" alt="${product.name}">
-                <p>Name: ${product.name}</p>
-                <p>Price: $${product.price}</p>
-                <button onclick="editProduct(${product.id}, '${product.name}', ${product.price}, '${product.imageUrl}')">Edit</button>
+                <img src="${product.image}" alt="${product.name}">
+                <h3>${product.name}</h3>
+                <p>${product.description}</p>
+                <button onclick="editProduct('${product.id}')">Edit</button>
             `;
-            productList.appendChild(productCard);
+            productContainer.appendChild(productCard);
         });
     }
 
-    window.editProduct = (id, name, price, imageUrl) => {
-        productIdInput.value = id;
-        productNameInput.value = name;
-        productPriceInput.value = price;
-        productImageInput.value = imageUrl;
-        modalTitle.innerText = 'Edit Product';
-        openModal();
+    window.editProduct = async (id) => {
+        const response = await fetch(`${apiUrl}/${id}`);
+        const product = await response.json();
+        
+        document.getElementById('productName').value = product.name;
+        document.getElementById('productImage').value = product.image;
+        document.getElementById('productDescription').value = product.description;
+
+        isUpdate = true;
+        updateId = id;
+        document.getElementById('formTitle').textContent = 'Update Product';
+        productFormPopup.style.display = 'block';
     };
 
-    function openModal() {
-        productModal.style.display = 'block';
+    async function addProduct(product) {
+        await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(product)
+        });
     }
 
-    function closeModalFunc() {
-        productModal.style.display = 'none';
-        productForm.reset();
-        productIdInput.value = '';
-        modalTitle.innerText = 'Add Product';
+    async function updateProduct(id, product) {
+        await fetch(`${apiUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(product)
+        });
     }
 
     loadProducts();
